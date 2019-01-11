@@ -22,6 +22,7 @@ import android.app.PendingIntent;
 import android.widget.Toast;
 
 import com.firebase.jobdispatcher.Constraint;
+import com.firebase.jobdispatcher.Driver;
 import com.firebase.jobdispatcher.FirebaseJobDispatcher;
 import com.firebase.jobdispatcher.GooglePlayDriver;
 import com.firebase.jobdispatcher.Job;
@@ -39,7 +40,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public static final String BROADCAST_ACTION = "BROADCAST_ACTION";
 
     private ProgressDialog dialog;
-    AlarmManager jadwal;
 
     /**
      * broadcast receiver untuk menerima broadcast dari service
@@ -50,8 +50,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-
 
         dialog = new ProgressDialog(this);
         dialog.setCancelable(false);
@@ -64,6 +62,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         findViewById(R.id.btnAlarm).setOnClickListener(this);
 
         registerMyReceiver();
+
+        jobDispatcher = new FirebaseJobDispatcher(new GooglePlayDriver(this));
 
 
     }
@@ -119,13 +119,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void runJobDispatcher() {
         // TODO panggil Firebase Job Dispatcher untuk menggantikan Job Scheduler
 
-        FirebaseJobDispatcher dispatcher = new FirebaseJobDispatcher(new GooglePlayDriver(this));
-        Job myJob = dispatcher.newJobBuilder()
-                .setService(MyService.class) // the JobService that will be called
-                .setTag("my-unique-tag")        // uniquely identifies the job
+        Job myJob = jobDispatcher.newJobBuilder()
+                .setService(MyService.class)
+                .setTag(Job_Tag)
+                .setLifetime(Lifetime.FOREVER)
+                .setRecurring(true)
+                .setTrigger(Trigger.executionWindow(3,5))
+                .setRetryStrategy(RetryStrategy.DEFAULT_EXPONENTIAL)
+                .setReplaceCurrent(false)
+                .setConstraints(Constraint.ON_ANY_NETWORK)
                 .build();
 
-        dispatcher.mustSchedule(myJob);
+        jobDispatcher.mustSchedule(myJob);
     }
 
     /**
